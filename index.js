@@ -29,13 +29,11 @@ app.use(require("./routes/routes"));
 //creating the post
 app.post("/tasks", auth, (req, res) => {
   const { title, description, completed } = req.body;
-  if (!title || !description) {
+  if (!title) {
     return res.status(402).json({
       error: "please fill all the fields",
     });
   }
-  res.json("Ok");
-
   const Note = new NOTE({
     user: req.user,
     title,
@@ -44,19 +42,21 @@ app.post("/tasks", auth, (req, res) => {
   });
   Note.save()
     .then((result) => {
-      return res.json({ Note: result });
+      return res.json(result);
     })
     .catch((err) => console.log(err));
 });
 
 //get all api
-app.get("/tasks", (req, res) => {
-  NOTE.find()
+app.get("/tasks", auth, (req, res) => {
+  const userId = req.user;
+  NOTE.find({ user: userId })
     .sort({ createdAt: -1 })
     .then((note) => res.json(note))
     .catch((err) => console.log(err));
 });
 
+//delete api
 app.delete("/tasks/:id", async (req, res) => {
   const { id } = req.params;
   const event = await NOTE.findByIdAndDelete(id);
@@ -73,12 +73,13 @@ app.delete("/tasks/:id", async (req, res) => {
 });
 
 //update api
-app.put("/tasks/:id", async (req, res) => {
+app.patch("/tasks/:id", async (req, res) => {
   const { id } = req.params;
   const event = await NOTE.findByIdAndUpdate(id, req.body, { new: true });
 
   if (event) {
     res.status(200).json({
+      event,
       message: "updated sucessfully",
     });
   } else {
@@ -88,7 +89,7 @@ app.put("/tasks/:id", async (req, res) => {
   }
 });
 
-//delete api
+//get by id api
 app.get("/tasks/:id", async (req, res) => {
   const { id } = req.params;
   try {
